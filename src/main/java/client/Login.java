@@ -1,4 +1,4 @@
-package com.example;
+package client;
 
 import java.awt.BorderLayout;
 import java.awt.EventQueue;
@@ -13,6 +13,8 @@ import javax.swing.JLabel;
 import java.awt.Font;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.ActionEvent;
 
 public class Login extends JFrame {
@@ -21,9 +23,15 @@ public class Login extends JFrame {
 	private JTextField txtName;
 	private JTextField txtAddress;
 	private JTextField txtPort;
-
-	public Login() {
+	private WindowManager windowManager;
+	
+	public Login(WindowManager manager) {
+		this.windowManager = manager;
+		createWindow();
 		
+	}
+	
+	private void createWindow(){	
 		try {
 			UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		} catch (Exception e) {
@@ -35,6 +43,7 @@ public class Login extends JFrame {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setLocationRelativeTo(null);
 		setBounds(100, 100, 361, 444);
+		
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setLocationRelativeTo(null);
@@ -62,6 +71,14 @@ public class Login extends JFrame {
 		contentPane.add(lblAddress);
 		
 		txtPort = new JTextField();
+		txtPort.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if(e.getKeyCode() == KeyEvent.VK_ENTER) {
+					login();
+				}
+			}
+		});
 		txtPort.setColumns(10);
 		txtPort.setBounds(79, 231, 187, 20);
 		contentPane.add(txtPort);
@@ -80,6 +97,9 @@ public class Login extends JFrame {
 		});
 		btnConnect.setBounds(128, 275, 89, 23);
 		contentPane.add(btnConnect);
+		
+		setVisible(true);
+		
 	}
 	
 	private void login() {
@@ -88,21 +108,10 @@ public class Login extends JFrame {
 		int port = Integer.parseInt(txtPort.getText());
 		System.out.println("Username: " + userName + ", address: " + address +  ", port: " + port);
 		dispose();
+		windowManager.activateChat(userName, address, port);
 		
 	}
+	
 
-	
-	
-	public static void main(String[] args) {
-		EventQueue.invokeLater(new Runnable() {
-			public void run() {
-				try {
-					Login frame = new Login();
-					frame.setVisible(true);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		});
-	}
+
 }
