@@ -29,26 +29,47 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.net.DatagramSocket;
 
 public class Chat extends JFrame {
 	
-	private JPanel contentPane;
 	private String username;
-	private String address;
-	private int port;
+	private Thread consumeThread;
+	
+	private JPanel contentPane;
+	private Connection connection;
 	private JTextField txtMessage;
 	private JTextArea txtrMessages;
 	private DefaultCaret carret;
-
-	public Chat(String username, String address, int port) {
-		setTitle("Chat Client");
+	
+	public Chat(String username, Connection connection) {
 		this.username = username;
-		this.address = address;
-		this.port = port;
+		this.connection = connection;
 		
 		createWindow();
-		greetingMessage();
+		print("Trying to connect as  " + username  );
+		
+		
+		if(connection != null){
+			// connection established
+			print("Connection establised");
+			consumeThread = new Thread() {
+				public void run() {
+					consumeReceived();
+				}
+			};
+			consumeThread.setName("Chat Consume Thread");
+			consumeThread.start();
+			connection.send("/c/" + username);
+			connection.send("User:" + username + " connected from " 
+				+ connection.getAddress() 
+				+ ":" 
+				+ connection.getPort()
+			);
+			
+		}
 	}
+	
 	
 	private void createWindow() {	
 		try {
@@ -58,6 +79,7 @@ public class Chat extends JFrame {
 		}
 		
 		setVisible(true);
+		setTitle("Chat Client");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(1200,700);
 		
@@ -138,11 +160,34 @@ public class Chat extends JFrame {
 		if(!message.equals("")) {			
 			txtrMessages.append(username + ": " + message + "\n\r");
 			txtrMessages.setCaretPosition(txtrMessages.getDocument().getLength());
+			connection.send("/m/" + message);
+			
 		}
 	}
 	
-	public void greetingMessage() {
-		txtrMessages.append("Connection to " + address + ":" + port + " for user " + username + "\n\r");
+	public void print(String message) {
+		txtrMessages.append(message + "\n\r");
 	}
+	
+	private void consumeReceived() {
+		String message;
+
+		while(connection.isActive()) {
+			synchronized (connection) {
+				if(! connection.isMessage()) {
+					try {
+						System.out.println("queueu is empty");
+						connection.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				message = connection.getReceivedMessage();
+				txtrMessages.append(message);			
+			}
+		}
+		
+	}
+	
 
 }
