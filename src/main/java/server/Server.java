@@ -58,7 +58,6 @@ public class Server implements Runnable {
 					try {
 						socket.receive(packet);
 						process(packet);
-						System.out.println(new String(packet.getData(),packet.getOffset(),packet.getLength()));
 						
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -72,6 +71,7 @@ public class Server implements Runnable {
 	public void process(DatagramPacket packet) {
 		String message =new String(packet.getData(),packet.getOffset(),packet.getLength());
 		if(message.startsWith("/c/")) {
+			// Client want to connect connect client and inform client --> "/c/<username>"
 			UUID id = UUID.randomUUID();
 			String name = message.substring(3,message.length());
 			if(clients.containsKey(name)) {
@@ -79,8 +79,15 @@ public class Server implements Runnable {
 				return;
 			}
 			clients.put(name, new Client(name,packet.getAddress(),packet.getPort(),id));
+			send(message, packet.getAddress(), packet.getPort());
+			System.out.println(name + " connected from " + packet.getAddress().toString()+ ":" + packet.getPort());
 		}else if (message.startsWith("/m/")) {
+			// Client want to send message send messages all other client -> "/m/<message>"
 			sendAll(message);
+		}else if (message.startsWith("/d/")) {
+			// Client want to disconnect with message -> "/d/<username>"
+			String name = message.substring(3, message.length());
+			disconnect(clients.get(name));
 		}
 		else {
 			System.out.println(message);
@@ -109,5 +116,11 @@ public class Server implements Runnable {
 		send.start();
 	}
 
+	public void disconnect(Client client) {
+		if(client != null) {
+			clients.remove(client.getName());
+			System.out.println(client.getName() + " disconnected from " + client.getAddress().toString() + ":" + client.getPort());
+		}
+	}
 
 }

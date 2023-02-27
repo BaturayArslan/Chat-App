@@ -15,9 +15,6 @@ public class Connection {
 	private int port;
 	private String username;
 	private DatagramSocket socket;
-	private ConnectionManager manager;
-	private Queue<String> receiveQue;
-	private Thread receiveThread;
 	private boolean active;
 	
 	public Connection(String username,String address, int port) throws Exception {
@@ -26,15 +23,9 @@ public class Connection {
 			this.ip = InetAddress.getByName(address);
 			this.port = port;
 			this.socket = new DatagramSocket();
-			this.receiveQue = new LinkedList<String>();
 			this.active = true;
-			receiveThread = new Thread(){
-				public void run() {
-					recieve();
-				}
-			};
-			receiveThread.setName("Receive Thread");
-			receiveThread.start();
+
+
 			
 		} catch (UnknownHostException | SocketException e) {
 			e.printStackTrace();
@@ -43,25 +34,17 @@ public class Connection {
 		
 	}
 	
-	public synchronized void recieve() {
-		while(active) {			
-			byte[] data = new byte[1024];
-			DatagramPacket packet = new DatagramPacket(data, data.length);
-			try {
-				socket.receive(packet);
-				System.out.println("package received");
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-			receiveQue.add(new String(packet.getData(), packet.getOffset(),packet.getLength()));
-			notify();
-			 try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+	public String recieve() {
+		byte[] data = new byte[1024];
+		DatagramPacket packet = new DatagramPacket(data, data.length);
+		try {
+			socket.receive(packet);
+			return new String(packet.getData(),packet.getOffset(),packet.getLength());
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+
+		return null;
 	}
 	
 	
@@ -97,20 +80,14 @@ public class Connection {
 	public boolean isActive() {
 		return this.active;
 	}
+	
 	 public void setActive(boolean value) {
 		 this.active = value;
 	 }
 	
-	public synchronized boolean isMessage() {
-		if(receiveQue.isEmpty()) {
-			return false;
-		}
-		return true;
-	}
+
 	
-	public synchronized String getReceivedMessage() {
-		return receiveQue.poll();
-	}
+
 	
 	
 	

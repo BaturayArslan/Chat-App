@@ -29,12 +29,14 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.net.DatagramSocket;
 
 public class Chat extends JFrame {
 	
 	private String username;
-	private Thread consumeThread;
+	private Thread receiveThread;
 	
 	private JPanel contentPane;
 	private Connection connection;
@@ -53,19 +55,14 @@ public class Chat extends JFrame {
 		if(connection != null){
 			// connection established
 			print("Connection establised");
-			consumeThread = new Thread() {
+			receiveThread = new Thread() {
 				public void run() {
-					consumeReceived();
+					receive();
 				}
 			};
-			consumeThread.setName("Chat Consume Thread");
-			consumeThread.start();
+			receiveThread.setName("Chat Receive Thread");
+			receiveThread.start();
 			connection.send("/c/" + username);
-			connection.send("User:" + username + " connected from " 
-				+ connection.getAddress() 
-				+ ":" 
-				+ connection.getPort()
-			);
 			
 		}
 	}
@@ -122,24 +119,24 @@ public class Chat extends JFrame {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				if(e.getKeyCode() == KeyEvent.VK_ENTER) {
-					send();
+					send(true);
 				}
 			}
 		});
 		GridBagConstraints gbc_txtMessage = new GridBagConstraints();
 		txtMessage.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		txtMessage.setColumns(10);
 		gbc_txtMessage.insets = new Insets(0, 0, 5, 5);
 		gbc_txtMessage.fill = GridBagConstraints.BOTH;
 		gbc_txtMessage.gridx = 0;
 		gbc_txtMessage.gridy = 1;
 		contentPane.add(txtMessage, gbc_txtMessage);
 		
-		txtMessage.setColumns(10);
 		
 		JButton btnSend = new JButton("Send");
 		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				send();
+				send(true);
 			}
 		});
 		GridBagConstraints gbc_btnSend = new GridBagConstraints();
@@ -149,41 +146,51 @@ public class Chat extends JFrame {
 		gbc_btnSend.gridy = 1;
 		contentPane.add(btnSend, gbc_btnSend);
 		
+		addWindowListener(new WindowAdapter() {
+			public void windowClosing(WindowEvent e) {
+				String disconnect = "/d/" + username;
+				connection.send(disconnect);
+			}
+		});
+		
 		txtMessage.requestFocusInWindow();
 		
 		
 	}
 	
-	public void send() {
-		String message = txtMessage.getText();
+	public void send(boolean isMessage) {
+		String message = username + ": " + txtMessage.getText();
 		txtMessage.setText("");
 		if(!message.equals("")) {			
-			txtrMessages.append(username + ": " + message + "\n\r");
 			txtrMessages.setCaretPosition(txtrMessages.getDocument().getLength());
 			connection.send("/m/" + message);
 			
-		}
+		}			
+
 	}
 	
 	public void print(String message) {
 		txtrMessages.append(message + "\n\r");
 	}
 	
-	private void consumeReceived() {
+	private void receive() {
 		String message;
 
 		while(connection.isActive()) {
-			synchronized (connection) {
-				if(! connection.isMessage()) {
-					try {
-						System.out.println("queueu is empty");
-						connection.wait();
-					} catch (InterruptedException e) {
-						e.printStackTrace();
-					}
-				}
-				message = connection.getReceivedMessage();
-				txtrMessages.append(message);			
+			message = connection.recieve();
+			if(message.startsWith("/c/")) {
+				print("Successfully connected as " + message.split("/c/")[1]);
+			}else if (message.startsWith("/m/")) {
+				String tmp = message.substring(3,message.length());
+				print(tmp);
+			}else {
+				System.out.println("Received unknown message type: " + message);
+			}
+			
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
 			}
 		}
 		

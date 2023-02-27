@@ -30,4 +30,8 @@ public class Client {
 		return this.ip;
 	}
 	
+	public String getName() {
+		return this.username;
+	}
+	
 }
