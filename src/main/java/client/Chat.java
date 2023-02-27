@@ -183,7 +183,13 @@ public class Chat extends JFrame {
 			}else if (message.startsWith("/m/")) {
 				String tmp = message.substring(3,message.length());
 				print(tmp);
-			}else {
+			}else if (message.startsWith("/ping/")) {
+				String name = message.substring(6, message.length());
+				if(name.equals(username)) {
+					connection.send("/pong/" + username);
+				}
+			}
+			else {
 				System.out.println("Received unknown message type: " + message);
 			}
 			

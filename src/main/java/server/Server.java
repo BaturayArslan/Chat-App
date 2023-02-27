@@ -6,6 +6,7 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.UUID;
 
 public class Server {
@@ -13,13 +14,16 @@ public class Server {
 	private DatagramSocket socket;
 	private boolean isRunning;
 	private HashMap<String,Client> clients;
+	private HashSet<String> responded;
+	private Thread receiveThread, clientManThread;
 	
-	private Thread run,sendThread, receiveThread, clientManThread;
+	public static int MAX_ATTEMPT = 5;
 	
 	public Server(int port) {
 		this.port = port;
 		this.isRunning = false;
 		this.clients = new HashMap<String,Client>();
+		this.responded = new HashSet<String>();
 		try {
 			socket = new DatagramSocket(port);
 			
@@ -34,8 +38,14 @@ public class Server {
 		clientManThread = new Thread("clientMan Thread") {
 			public void run() {
 				while(isRunning) {
-					
-				}
+					ping();
+					try {
+						Thread.sleep(2000);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+					checkClient();
+				}					
 			}
 		};
 		clientManThread.start();
@@ -55,13 +65,14 @@ public class Server {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
-				}
+				}					
+				
 			}
 		};
 		receiveThread.start();
 	}
 	
-	private  void process(DatagramPacket packet) {
+	private  synchronized void process(DatagramPacket packet) {
 		String message =new String(packet.getData(),packet.getOffset(),packet.getLength());
 		if(message.startsWith("/c/")) {
 			// Client want to connect connect client and inform client --> "/c/<username>"
@@ -80,14 +91,18 @@ public class Server {
 		}else if (message.startsWith("/d/")) {
 			// Client want to disconnect with message -> "/d/<username>"
 			String name = message.substring(3, message.length());
-			disconnect(clients.get(name));
+			disconnect(clients.get(name), false);
+		}else if(message.startsWith("/pong/")) {
+			// Client response back to our ping message
+			String name = message.substring(6, message.length());
+			responded.add(name);
 		}
 		else {
 			System.out.println(message);
 		}
 	}
 	
-	private void sendAll(String message) {
+	private synchronized void sendAll(String message) {
 		
 		for(Client client: clients.values()) {
 			send(message, client.getAddress(),client.getPort());
@@ -109,10 +124,11 @@ public class Server {
 		send.start();
 	}
 
-	private void disconnect(Client client) {
+	private synchronized void disconnect(Client client, boolean isTimeout) {
 		if(client != null) {
 			clients.remove(client.getName());
-			System.out.println(client.getName() + " disconnected from " + client.getAddress().toString() + ":" + client.getPort());
+			String cause = isTimeout ? " timeout from ":" disconnected from ";
+			System.out.println(client.getName() + cause + client.getAddress().toString() + ":" + client.getPort());
 		}
 	}
 	
@@ -124,6 +140,27 @@ public class Server {
 		isRunning = true;
 		manageClient();
 		receive();
+	}
+	
+	private synchronized void ping() {
+		for(Client client : clients.values()) {
+			send("/ping/" + client.getName(), client.getAddress(),client.getPort());
+		}
+	}
+	
+	private synchronized void checkClient() {
+		for(Client client: clients.values()) {
+			if(!responded.contains(client.getName())) {
+				client.incAttempt();
+				if(client.getAttempt() > MAX_ATTEMPT) {
+					disconnect(client, true);
+				}
+			}else {
+				responded.remove(client.getName());
+				client.resetAttempt();
+			}
+			
+		}
 	}
 
 }

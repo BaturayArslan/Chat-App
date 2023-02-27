@@ -34,4 +34,16 @@ public class Client {
 		return this.username;
 	}
 	
+	public int getAttempt() {
+		return attempt;
+	}
+	
+	public void incAttempt() {
+		attempt += 1;
+	}
+	
+	public void resetAttempt() {
+		attempt = 0;
+	}
+	
 }
