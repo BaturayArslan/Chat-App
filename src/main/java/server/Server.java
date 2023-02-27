@@ -8,7 +8,7 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class Server implements Runnable {
+public class Server {
 	private int port;
 	private DatagramSocket socket;
 	private boolean isRunning;
@@ -26,21 +26,14 @@ public class Server implements Runnable {
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
-		run = new Thread(this,"Server:"+ port + " Thread");
-		run.start();
 	}
 	
-	public void run() {
-		isRunning = true;
-		manageClient();
-		receive();
-		
-	}
+
 	
 	private void manageClient() {
 		clientManThread = new Thread("clientMan Thread") {
 			public void run() {
-				while(true) {
+				while(isRunning) {
 					
 				}
 			}
@@ -54,7 +47,7 @@ public class Server implements Runnable {
 			public void run() {
 				byte[] data = new byte[1024];
 				DatagramPacket packet = new DatagramPacket(data,data.length);
-				while(true) {
+				while(isRunning) {
 					try {
 						socket.receive(packet);
 						process(packet);
@@ -68,7 +61,7 @@ public class Server implements Runnable {
 		receiveThread.start();
 	}
 	
-	public void process(DatagramPacket packet) {
+	private  void process(DatagramPacket packet) {
 		String message =new String(packet.getData(),packet.getOffset(),packet.getLength());
 		if(message.startsWith("/c/")) {
 			// Client want to connect connect client and inform client --> "/c/<username>"
@@ -94,14 +87,14 @@ public class Server implements Runnable {
 		}
 	}
 	
-	public void sendAll(String message) {
+	private void sendAll(String message) {
 		
 		for(Client client: clients.values()) {
 			send(message, client.getAddress(),client.getPort());
 		}
 	}
 	
-	public void send(String message, final InetAddress address, final int port) {
+	private void send(String message, final InetAddress address, final int port) {
 		final byte[] data = message.getBytes(); 
 		Thread send = new Thread(){
 			public void run() {
@@ -116,11 +109,21 @@ public class Server implements Runnable {
 		send.start();
 	}
 
-	public void disconnect(Client client) {
+	private void disconnect(Client client) {
 		if(client != null) {
 			clients.remove(client.getName());
 			System.out.println(client.getName() + " disconnected from " + client.getAddress().toString() + ":" + client.getPort());
 		}
+	}
+	
+	public int getPort() {
+		return port;
+	}
+	
+	public void start() {
+		isRunning = true;
+		manageClient();
+		receive();
 	}
 
 }

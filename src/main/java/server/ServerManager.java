@@ -11,10 +11,22 @@ public class ServerManager {
 		
 	}
 	
-	public Server addServer(int port) {
-		Server server = new Server(port);
+	public void addServer(Server server) {
 		servers.add(server);
-		return server;
+	}
+	
+	public void startServer(int port) {
+		for(Server server: servers) {
+			if(server.getPort() == port) {
+				server.start();
+				return;
+			}
+		}
+	}
+	public void startServer() {
+		for(Server server: servers) {
+			server.start();
+		}
 	}
 	
 	public static void main(String[] args) {
@@ -26,8 +38,11 @@ public class ServerManager {
 		
 		int port = Integer.parseInt(args[0]);
 		System.out.println(port  + " specified as a new server port.");
+		
 		ServerManager manager = new ServerManager();
-		manager.addServer(port);
+		Server server = new Server(port);
+		manager.addServer(server);
+		manager.startServer();
 		
 	}
 }
