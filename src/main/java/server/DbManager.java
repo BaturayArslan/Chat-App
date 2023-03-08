@@ -10,8 +10,8 @@ public class DbManager {
     // init database constants
     private static final String DATABASE_DRIVER = "com.mysql.cj.jdbc.Driver";
     private static final String DATABASE_URL = "jdbc:mysql://localhost:3306/<YOUR_DATABASE_NAME>";
-    private static final String USERNAME = "YOUR_USERNAME";
-    private static final String PASSWORD = "YOUR_PASSWORD";
+    private static final String USERNAME = "USERNAME";
+    private static final String PASSWORD = "PASSWORD";
     private static final String MAX_POOL = "250";
 
     // init connection object

@@ -239,8 +239,8 @@ public class Room extends JFrame {
 		}else if(message.getMessageCode() == MessageType.GET_ROOMS.getCode()) {
 			// Get all room status --> "id,roomName,userCount,isPublic,id,roomName,userCount,isPublic...."
 			initRooms(message.getMessage());
-		}
-		else {
+			
+		}else {
 			System.out.println("Unknown message type: " + message.getMessageCode() + ":" +message.getMessage());
 		}
 	}

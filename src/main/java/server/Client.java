@@ -270,6 +270,7 @@ public class Client {
 			try {
 				room.leave(username);
 				sendUserLeave(room);
+				informLoby(room);
 				room = server.getRoomManager().enterLoby(this);
 				send(new Message(16,username));
 			} catch (Exception e) {

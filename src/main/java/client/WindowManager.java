@@ -6,8 +6,8 @@ import java.net.DatagramSocket;
 import javax.swing.JFrame;
 
 public class WindowManager {
-	private JFrame loginPage;
-	private JFrame chatPage;
+	private Login loginPage;
+	private Chat chatPage;
 	private ConnectionManager connManager;
 	
 	public WindowManager(ConnectionManager connManager) {	
@@ -15,7 +15,7 @@ public class WindowManager {
 		activateLogin();
 	}
 	
-	public void setChatPage(JFrame chatFrame) {
+	public void setChatPage(Chat chatFrame) {
 		this.chatPage = chatFrame;
 	}
 	
@@ -44,10 +44,10 @@ public class WindowManager {
 		} catch (IOException e) {
 			// Connection couldn't established.
 			isError = true;
-		}finally {			
+		}finally {		
 			loginPage = new Login(this,connManager.getConnection("init"));
 			if(isError) {
-				((Login) loginPage).showError("Connection Couldn't Established.Please Try Again.");				
+				loginPage.showError("Connection Couldn't Established.Please Try Again.");				
 			}
 		}
 	}
@@ -61,7 +61,7 @@ public class WindowManager {
 				
 			} catch (IOException e) {
 				// Connection couldn't established.
-				((Login) loginPage).showError("Connection Couldn't Established.Please Try Again.");
+				loginPage.showError("Connection Couldn't Established.Please Try Again.");
 			}
 		}
 	}
