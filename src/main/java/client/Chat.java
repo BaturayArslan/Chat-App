@@ -1,70 +1,76 @@
 package client;
 
-import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import java.awt.FlowLayout;
-import java.awt.Font;
-
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.border.EmptyBorder;
-import javax.swing.text.DefaultCaret;
-
-import java.awt.GridBagLayout;
-import java.awt.GridBagConstraints;
 import java.awt.Color;
-import javax.swing.JTextArea;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Insets;
-import java.awt.ScrollPane;
-
-import javax.swing.JButton;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import org.eclipse.wb.swing.FocusTraversalOnArray;
-import java.awt.Component;
-import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.net.DatagramSocket;
+import java.io.IOException;
+import java.util.Hashtable;
 
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
+import javax.swing.text.DefaultCaret;
+
+import message.Message;
+import message.MessageType;
+
+@SuppressWarnings("serial")
 public class Chat extends JFrame {
 	
 	private String username;
 	private Thread receiveThread;
+	private Connection connection;
+	private Hashtable<String,JLabel> users;
+	private WindowManager windowManager;
+	private boolean active;
 	
 	private JPanel contentPane;
-	private Connection connection;
 	private JTextField txtMessage;
 	private JTextArea txtrMessages;
+	private JPanel panelUsers;
 	private DefaultCaret carret;
+	private JScrollPane userScrollPane;
 	
-	public Chat(String username, Connection connection) {
+	public Chat(String username, Connection connection, WindowManager manager ) {
 		this.username = username;
 		this.connection = connection;
+		this.users = new Hashtable<String,JLabel>();
+		this.windowManager = manager;
+		this.active = true;
 		
 		createWindow();
-		print("Trying to connect as  " + username  );
-		
 		
 		if(connection != null){
 			// connection established
-			print("Connection establised");
 			receiveThread = new Thread() {
 				public void run() {
 					receive();
+
 				}
 			};
 			receiveThread.setName("Chat Receive Thread");
 			receiveThread.start();
-			connection.send("/c/" + username);
 			
 		}
+		
+		getUsers();
 	}
 	
 	
@@ -75,7 +81,6 @@ public class Chat extends JFrame {
 			e.printStackTrace();
 		}
 		
-		setVisible(true);
 		setTitle("Chat Client");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setSize(1200,700);
@@ -86,9 +91,9 @@ public class Chat extends JFrame {
 		
 		GridBagLayout gbl_contentPane = new GridBagLayout();
 		gbl_contentPane.columnWidths = new int[]{1000, 75, 125};
-		gbl_contentPane.rowHeights = new int[]{600,100};
-		gbl_contentPane.columnWeights = new double[]{1.0, 1.0, 0.0};
-		gbl_contentPane.rowWeights = new double[]{1.0, 1.0};
+		gbl_contentPane.rowHeights = new int[]{50,550,100};
+		gbl_contentPane.columnWeights = new double[]{1.0, 0.5, 0.2};
+		gbl_contentPane.rowWeights = new double[]{0.1,1.0, 0.0};
 		contentPane.setLayout(gbl_contentPane);
 		
 		txtrMessages = new JTextArea();
@@ -101,18 +106,22 @@ public class Chat extends JFrame {
 		gbc_txtrMessages.gridx = 0;
 		gbc_txtrMessages.gridy = 0;
 		gbc_txtrMessages.gridwidth = 2;
+		gbc_txtrMessages.gridheight= 2;
 		gbc_txtrMessages.fill = GridBagConstraints.BOTH;
 		JScrollPane scrollPane = new JScrollPane(txtrMessages);
 		contentPane.add(scrollPane, gbc_txtrMessages);
 		
-		JPanel panelUsers = new JPanel();
+		panelUsers = new JPanel();
 		GridBagConstraints gbc_panelUsers = new GridBagConstraints();
 		gbc_panelUsers.insets = new Insets(0, 0, 5, 5);
 		gbc_panelUsers.fill = GridBagConstraints.BOTH;
 		gbc_panelUsers.gridx = 2;
-		gbc_panelUsers.gridy = 0;
+		gbc_panelUsers.gridy = 1;
 		gbc_panelUsers.gridheight = 2; 
-		contentPane.add(panelUsers, gbc_panelUsers);
+		userScrollPane = new JScrollPane(panelUsers);
+		contentPane.add(userScrollPane, gbc_panelUsers);
+		panelUsers.setLayout(new BoxLayout(panelUsers, BoxLayout.Y_AXIS));
+		
 		
 		txtMessage = new JTextField();
 		txtMessage.addKeyListener(new KeyAdapter() {
@@ -129,7 +138,7 @@ public class Chat extends JFrame {
 		gbc_txtMessage.insets = new Insets(0, 0, 5, 5);
 		gbc_txtMessage.fill = GridBagConstraints.BOTH;
 		gbc_txtMessage.gridx = 0;
-		gbc_txtMessage.gridy = 1;
+		gbc_txtMessage.gridy = 2;
 		contentPane.add(txtMessage, gbc_txtMessage);
 		
 		
@@ -140,66 +149,134 @@ public class Chat extends JFrame {
 			}
 		});
 		GridBagConstraints gbc_btnSend = new GridBagConstraints();
-		gbc_btnSend.fill = GridBagConstraints.VERTICAL;
+		gbc_btnSend.fill = GridBagConstraints.BOTH;
 		gbc_btnSend.insets = new Insets(0, 0, 5, 5);
 		gbc_btnSend.gridx = 1;
-		gbc_btnSend.gridy = 1;
+		gbc_btnSend.gridy = 2;
 		contentPane.add(btnSend, gbc_btnSend);
 		
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
-				String disconnect = "/d/" + username;
-				connection.send(disconnect);
+				connection.close();
 			}
 		});
 		
+		JButton btnLeave = new JButton("Leave ");
+		btnLeave.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				leave();
+			}
+		});
+		GridBagConstraints gbc_btnLeave = new GridBagConstraints();
+		gbc_btnLeave.fill = GridBagConstraints.BOTH;
+		gbc_btnLeave.insets = new Insets(0, 0, 5, 0);
+		gbc_btnLeave.gridx = 2;
+		gbc_btnLeave.gridy = 0;
+		contentPane.add(btnLeave, gbc_btnLeave);
+		
 		txtMessage.requestFocusInWindow();
 		
+		setVisible(true);
 		
 	}
 	
-	public void send(boolean isMessage) {
-		String message = username + ": " + txtMessage.getText();
+	private void send(boolean isMessage) {
+		String message = txtMessage.getText();
 		txtMessage.setText("");
-		if(!message.equals("")) {			
+		if(!message.equals("")) {
+			message =  username + ": " + message;
 			txtrMessages.setCaretPosition(txtrMessages.getDocument().getLength());
-			connection.send("/m/" + message);
+			connection.send(new Message(1, message));
 			
 		}			
 
 	}
 	
-	public void print(String message) {
+	private void getUsers() {
+		connection.send(new Message(13,""));
+	}
+	
+	private void print(String message) {
 		txtrMessages.append(message + "\n\r");
 	}
 	
+	private void leave() {
+		connection.send(new Message(16, username));
+		
+	}
+	
 	private void receive() {
+		Message messageObj;
 		String message;
-
-		while(connection.isActive()) {
-			message = connection.recieve();
-			if(message.startsWith("/c/")) {
-				print("Successfully connected as " + message.split("/c/")[1]);
-			}else if (message.startsWith("/m/")) {
-				String tmp = message.substring(3,message.length());
-				print(tmp);
-			}else if (message.startsWith("/ping/")) {
-				String name = message.substring(6, message.length());
-				if(name.equals(username)) {
-					connection.send("/pong/" + username);
+		try {
+			while(active) {
+				messageObj = connection.recieve();
+				message = messageObj.getMessage();
+				
+				if(messageObj.getMessageCode() == MessageType.GET_USERS.getCode()) {
+					// Create Use List
+					String[] userList = message.split(",");
+					for(int i = 0; i < userList.length ; i++) {
+						String name = userList[i];
+						if(!users.contains(name)) {
+							addUser(name);
+						}
+					}
+				}else if (messageObj.getMessageCode() == MessageType.TEXTMESSAGE.getCode()) {
+					print(message);
+					
+				}else if (messageObj.getMessageCode() == MessageType.USER_JOİN.getCode()) {
+					if(!message.equals(username)){
+						// ADD USER TO USERLIST
+						addUser(message);
+					}
+				}else if (messageObj.getMessageCode() == MessageType.USER_LEAVE.getCode()) {
+					// REMOVE USER FROM USELIST
+					removeUser(message);
+				}else if (messageObj.getMessageCode() == MessageType.LEAVE_ROOM.getCode()) {
+					// Leave Room succesfull
+					active = false;
+					dispose();
+					windowManager.activateRoom(username);
+				}else {
+					System.out.println("Received unknown message type: " + message);
 				}
-			}
-			else {
-				System.out.println("Received unknown message type: " + message);
-			}
-			
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+				
+			}			
+		}catch (IOException | InterruptedException e) {
+			active = false;
+			windowManager.activateLogin();
+			ErrorDialog error = new ErrorDialog("Connection Interupt.");
+			dispose();
+			System.out.println("Disconnected");		
 		}
 		
+	}
+	
+	private Image scaleImage(Image icon, int width, int height) {
+		Image scaled = icon.getScaledInstance(width, height, Image.SCALE_SMOOTH);
+		return scaled;
+	}
+	
+	private void addUser(String name) {
+		JLabel lblUserName1 = new JLabel(name);
+		ImageIcon icon = new ImageIcon("blue-msn.png");
+		Image scaledImage = scaleImage(icon.getImage(), 20, 20);
+		ImageIcon scaledIcon = new ImageIcon(scaledImage);
+		lblUserName1.setIcon(scaledIcon);
+		panelUsers.add(lblUserName1);
+		panelUsers.updateUI();
+		users.put(name,lblUserName1);
+	}
+	
+	private void removeUser(String name) {
+		if(users.containsKey(name)) {
+			panelUsers.remove(users.get(name));
+			users.remove(name);
+			panelUsers.updateUI();
+			userScrollPane.updateUI();
+			
+		}
 	}
 	
 

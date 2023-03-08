@@ -11,26 +11,39 @@ import java.util.HashMap;
 
 public class ConnectionManager {
 	private HashMap<String,Connection> connections;
+	
+	private static final String ADDRESS = "localhost";
+	private static final int PORT = 8181;
 
 	
 	public ConnectionManager() {
 		this.connections = new HashMap<String, Connection>();
 	}
 	
-	public Connection makeConnection(String username,String address, int port) {
-		try {
-			Connection newConnection = new Connection(username, address, port);
-			connections.put(username, newConnection);
-			return newConnection;
+	public Connection makeConnection(String username) throws IOException {
+		Connection newConnection = new Connection(ADDRESS, PORT);
+		connections.put(username, newConnection);
+		return newConnection;
 			
-		} catch (Exception e) {
-			return null;
+	}
+	
+	public void clear(String username) {
+		if(connections.containsKey(username)) {
+			connections.remove(username);
 		}
 	}
 	
 	
 	public Connection getConnection(String username) {
 		return connections.get(username);
+	}
+	
+	public String getAddress() {
+		return ADDRESS;
+	}
+	
+	public int getPort() {
+		return PORT;
 	}
 	
 	

@@ -15,19 +15,7 @@ public class ServerManager {
 		servers.add(server);
 	}
 	
-	public void startServer(int port) {
-		for(Server server: servers) {
-			if(server.getPort() == port) {
-				server.start();
-				return;
-			}
-		}
-	}
-	public void startServer() {
-		for(Server server: servers) {
-			server.start();
-		}
-	}
+
 	
 	public static void main(String[] args) {
 		
@@ -42,7 +30,6 @@ public class ServerManager {
 		ServerManager manager = new ServerManager();
 		Server server = new Server(port);
 		manager.addServer(server);
-		manager.startServer();
 		
 	}
 }
